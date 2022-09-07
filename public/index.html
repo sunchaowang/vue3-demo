@@ -13,5 +13,17 @@
     </noscript>
     <div id="app"></div>
     <!-- built files will be auto injected -->
+    <script>
+      function performanceObCallback(list = []) {
+        console.log("performanceObCallback", list)
+        list.getEntries().forEach(element => {
+        });
+      }
+
+      const performanceOb = new PerformanceObserver(performanceObCallback)
+      performanceOb.observe({
+        entryTypes: ["element", "event", "first-input", "largest-contentful-paint", "layout-shift", "longtask", "mark", "measure", "navigation", "paint", "resource"]
+      })
+    </script>
   </body>
 </html>

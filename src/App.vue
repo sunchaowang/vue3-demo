@@ -1,13 +1,16 @@
 <template>
   <div id="app">
+    <button @click="getUserInfo" >Axios</button>
+    count: {{count}}
     <router-view />
   </div>
 </template>
 
 <script>
 import HelloWorld from './components/HelloWorld.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, reactive } from 'vue';
 import { effect } from '@vue/reactivity';
+import axios from 'axios';
 
 export default {
   name: 'App',
@@ -15,15 +18,79 @@ export default {
     HelloWorld,
   },
   setup() {
-    const count = ref(1);
+    let count = ref(1);
+
+    const countComputed = computed(() => {
+      return count.value + 2;
+    })
     effect(() => {
-      console.log('effect ... ', count.value);
+      console.log('effect ... ', countComputed.value + count.value);
     });
+
+    window.performance.mark("own")
 
     onMounted(() => {
       console.log('onMounted');
-      count = count + 1;
+      count.value = count.value+1;
+      window.performance.mark("own")
     });
+
+    const http = axios.create();
+    const requestMap = new Map();
+    const source = axios.CancelToken.source();
+
+    http.interceptors.request.use((config) => {
+      console.log("requestMap", requestMap.get("key"))
+      if (requestMap.has("key")) {
+        const cancelToken = requestMap.get("key");
+        console.log("cancelToken")
+        cancelToken("cancel");
+      }
+      config.cancelToken = config.cancelToken || new axios.CancelToken((c) => {
+        requestMap.set("key", c);
+      })
+      
+      
+      return config;
+    })
+
+    http.interceptors.response.use((response) => {
+      requestMap.delete("key")
+      return response;
+    })
+
+    function getUserInfo() {
+      const _promise = [
+        new Promise((resolve, reject) => {
+          console.log("promise 1")
+          resolve(1)
+        }),
+        new Promise((resolve, reject) => {
+          console.log("promise 2")
+          reject(2)
+        }),
+        new Promise((resolve, reject) => {
+          console.log("promise 3")
+          resolve(3)
+        }),
+      ]
+
+      Promise.race(_promise).then(res => {
+        console.log("promise then  ... ", res)
+      }).catch(e => {
+        console.log("promise catch  ... ", e)
+      })
+    }
+
+    function inCreme() {
+      count.value++;
+    }
+
+    return {
+      getUserInfo,
+      inCreme,
+      count
+    }
   },
   data() {
     return {
@@ -32,9 +99,12 @@ export default {
   },
   // beforeCreate: function () {
   //   console.group('beforeCreate 创建前状态===============》');
-  //   console.log('%c%s', 'color:red', 'el     : ' + this.$el); //undefined
+  //   console.log('%c%s', 'color:red', 'el     : ', this.$el); //undefined
   //   console.log('%c%s', 'color:red', 'data   : ' + this.$data); //undefined
   //   console.log('%c%s', 'color:red', 'message: ' + this.message);
+  //   this.$nextTick(() => {
+  //     console.log("nextTick", window.document.querySelector("#app"))
+  //   })
   // },
   // created: function () {
   //   console.group('created 创建完毕状态===============》');
